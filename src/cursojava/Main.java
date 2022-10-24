@@ -1,38 +1,142 @@
 package cursojava;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import exception.SistemException;
+import menu.Menu;
+import model.Cliente;
+import model.Conta;
+import model.ContaCorrente;
+import service.ClienteService;
+import service.ContaService;
+
+
+import java.util.*;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SistemException {
 
-        Banco dev = new Banco("Dev");
-        Cliente joao = new Cliente("João");
+        Scanner sc = new Scanner(System.in);
+        ClienteService clienteService = new ClienteService(sc);
+        ContaService contaService = new ContaService(sc);
 
-	    Conta cc = new ContaCorrente(joao);
-        Conta cp = new ContaPoupanca(joao);
+        Cliente cli1 = new Cliente("Breuníssio Dos Anjos", "1234");
+        clienteService.salvarDados(cli1.getId(), cli1);
+        Conta c1 = new ContaCorrente(cli1);
+        c1.setTipo(Conta.TIPO.CC);
+        c1.depositar(1200);
+        contaService.salvarDados(c1.getNumConta(), c1);
+        boolean continuar = true;
 
-        dev.salvarContas(cc);
-        dev.salvarContas(cp);
+        do {
+            try {
+                Menu.bemVindo();
+                Menu.menuCliente1();
+                int opcao = sc.nextInt();
+                sc.nextLine();
 
-        System.out.println("=====DEPÓSITO=====");
-        cc.depositar(1800);
-        cp.depositar(4700);
+                switch (opcao) {
 
-        cc.extrato();
-        cp.extrato();
+                    //Entrada na conta do cliente
+                    case 1:
+                        System.out.println("Digite o número da sua conta: ");
+                        int numConta = sc.nextInt();
+                        Conta conta = contaService.confereConta(numConta);
+                        if (conta == null) {
+                            throw new SistemException("Conta não encontrada!");
+                        } else {
+                            boolean valida = false;
+                            for(int i = 0; i < 3; i++) {
+                                System.out.println("Senha: ");
+                                String senha = sc.next();
+                                sc.nextLine();
+                                valida = contaService.validaSenha(numConta, senha);
+                                if (!valida) {
+                                    System.out.println("Senha Inválida!");
+                                } else {
+                                    break;
+                                }
+                            }
+                            if(valida){
+                                boolean logado = true;
+                                Cliente cliente = conta.getCliente();
+                                System.out.println("Bem vindo(a), "+cliente.getNome());
 
-        System.out.println("=====TRANSFERÊNCIA=====");
-        cp.transferir(1000, cc);
+                                //Menu do cliente com acesso autorizado
+                                do {
+                                    contaService.dadosConta(numConta);
+                                    System.out.println();
+                                    Menu.menuCliente2();
+                                    int opcao2 = sc.nextInt();
 
-        cc.extrato();
-        cp.extrato();
+                                    switch (opcao2) {
 
-        System.out.println("=====LISTA=====");
-        dev.mostrarTodas();
+                                        case 1:
+                                            contaService.deposito(conta);
+                                            break;
+
+                                        case 2:
+                                            contaService.saque(conta);
+                                            break;
+
+                                        case 3:
+                                            System.out.println("Digite o N° da conta para qual irá realizar a transferência: ");
+                                            int contaBeneficiario = sc.nextInt();
+                                            if(contaBeneficiario == conta.getNumConta()) {
+                                                System.out.println("Você não pode transferir dinheiro desta conta para esta conta!");
+                                            }else {
+                                                contaService.transferencia(conta, contaBeneficiario);
+                                            }
+                                            break;
+
+                                        case 4:
+                                            contaService.extrato(conta);
+                                            break;
+
+                                        case 0:
+                                            logado = false;
+                                            break;
+                                    }
+
+                                }while(logado);
+
+                            }
+                        }
+
+                        break;
+
+                    case 2:
+                        Cliente cliente = clienteService.cadastrarCliente();
+                        conta = contaService.abrirConta(cliente);
+                        cliente.setConta(conta);
+                        clienteService.salvarDados(cliente.getId(), cliente);
+
+                        //Testando se a abertura de conta está funcionando
+                        //System.out.println(cliente);
+                        //System.out.println(conta);
+                        break;
+
+                    case 3:
+
+                        break;
+
+                    case 0:
+                        continuar = false;
+                        break;
+
+                    default:
+                        System.out.println("Digite uma opção válida!");
+                        break;
+
+                }
 
 
+            } catch (SistemException e) {
+                System.out.println(e.getMessage());
+            }catch (InputMismatchException e){
+                System.out.println("Digite uma opção válida!");
+                sc.nextLine();
+            }
+
+        } while (continuar);
     }
 }
