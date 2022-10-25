@@ -6,9 +6,7 @@ import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
 import repository.Repository;
-import util.ImprimeValores;
 
-import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Scanner;
 import static model.Conta.TIPO.CC;
@@ -33,10 +31,31 @@ public class ContaService {
     }
 
     //Verifica se a senha digitada confere com a do proprietário da conta
-    public boolean validaSenha(int numConta, String senha){
+    public boolean confereSenha(int numConta, String senha){
+
         Conta conta = repository.buscarPorId(numConta);
         return conta.getCliente().getSenha().equals(senha);
 
+    }
+
+    //Possibilita que o usuário tenha apenas três tentativas para inserir a senha correta
+    public boolean validaSenha(Conta conta){
+        boolean valida = false;
+        for(int i = 0; i < 3; i++) {
+            System.out.println("Senha: ");
+            String senha = sc.next();
+            sc.nextLine();
+            valida = confereSenha(conta.getNumConta(), senha);
+            if (!valida) {
+                System.out.println("Senha Inválida!");
+            } else {
+                break;
+            }
+        }
+        if(!valida){
+            System.out.println("O número de tentativas expirou, tente novamente mais tarde!");
+        }
+        return valida;
     }
 
 
@@ -53,6 +72,7 @@ public class ContaService {
         System.out.println("=======================================");
     }
 
+
     public Conta abrirConta(Cliente cliente){
         Menu.tipoConta();
 
@@ -61,7 +81,8 @@ public class ContaService {
         if(opcao == 1){
             Conta conta = new ContaCorrente(cliente);
             conta.setTipo(CC);
-            deposito(conta);
+            double valor = valorDeposito();
+            deposito(conta, valor);
             salvarDados(conta.getNumConta(), conta );
             confirmacaoAberturaConta(conta);
             return conta;
@@ -69,12 +90,19 @@ public class ContaService {
         }else{
             Conta conta = new ContaPoupanca(cliente);
             conta.setTipo(CP);
-            deposito(conta);
+            double valor = valorDeposito();
+            deposito(conta, valor);
             salvarDados(conta.getNumConta(), conta );
             confirmacaoAberturaConta(conta);
             return conta;
         }
 
+    }
+
+    public double valorDeposito(){
+        System.out.println("Valor do Depósito: R$ ");
+        double valor = sc.nextDouble();
+        return Math.abs(valor);
     }
 
     public void confirmacaoAberturaConta(Conta conta){
@@ -86,16 +114,51 @@ public class ContaService {
         System.out.println();
     }
 
-    public void deposito(Conta conta){
-        System.out.println("Valor do Depósito: R$ ");
-        double valor = sc.nextDouble();
+    public void deposito(Conta conta, double valor){
+        valor = calculaJuros(conta, valor);
         conta.depositar(valor);
+    }
+
+    //Verifica se a Conta Corrente está no cheque especial e calcula o juros cobrados no depósito
+    public Double calculaJuros(Conta conta, double valor){
+        if(conta.getSaldo() < 0){
+            valor -= (conta.getSaldo() * (- ContaCorrente.getJuros()));
+            return valor;
+        }else{
+            return valor;
+        }
+
     }
 
     public void saque(Conta conta){
         System.out.println("Valor do saque: R$ ");
         double valor = sc.nextDouble();
-        conta.sacar(valor);
+        valor = Math.abs(valor);
+        boolean aprovado = limiteSaque(conta, valor);
+        if(aprovado) {
+            conta.sacar(valor);
+            validaSenha(conta);
+        }
+    }
+
+    public boolean limiteSaque(Conta conta, double valor){
+        boolean aprovado = false;
+        if(conta.getTipo().equals(CC)) {
+            if ((conta.getSaldo() - valor) < -500) {
+                System.out.println("Saldo insuficiente! Valor disponível: Saldo + R$ 500 do cheque especial!");
+                System.out.println();
+            }else{
+                aprovado = true;
+            }
+        }else if(conta.getTipo().equals(CP)){
+            if ((conta.getSaldo() - valor) < 0) {
+                System.out.println("Saldo insuficiente!");
+                System.out.println();
+            }else{
+                aprovado = true;
+            }
+        }
+        return aprovado;
     }
 
     public void transferencia(Conta conta, int contaBeneficiario) throws SistemException {
@@ -106,28 +169,31 @@ public class ContaService {
         }else {
             System.out.println("Valor da transferência: ");
             double valor = sc.nextDouble();
-            confirmaTransferencia(contaDeposito, valor);
-            System.out.println("Confirmar depósito? [S/N] ");
-            String confirmar = sc.next().toLowerCase();
-            sc.nextLine();
-            while (!confirmar.equals("s") && !confirmar.equals("n")) {
-                System.out.println("Opção inválida!");
+            valor = Math.abs(valor);
+            boolean aprovado = limiteSaque(conta, valor);
+            if(aprovado) {
                 confirmaTransferencia(contaDeposito, valor);
-                System.out.println("Confirmar depósito? [S/N] ");
-                confirmar = sc.next().toLowerCase();
+                System.out.println("Confirmar transferência? [S/N] ");
+                String confirmar = sc.next();
                 sc.nextLine();
-                //confirmar.toLowerCase();
-            }
-            if (confirmar.equals("s")) {
-                System.out.println("Senha:");
-                String senha = sc.nextLine();
-                boolean valida = validaSenha(conta.getNumConta(),senha);
-                if (!valida) {
-                    throw new SistemException("Senha Inválida!");
-                } else {
-                    conta.sacar(valor);
-                    contaDeposito.depositar(valor);
-                    salvarDados(contaDeposito.getNumConta(), contaDeposito);
+                while (!confirmar.equalsIgnoreCase("s") && !confirmar.equalsIgnoreCase("n")) {
+                    System.out.println("Opção inválida!");
+                    confirmaTransferencia(contaDeposito, valor);
+                    System.out.println("Confirmar transferência? [S/N] ");
+                    confirmar = sc.next();
+                    sc.nextLine();
+
+                }
+                if (confirmar.equalsIgnoreCase("s")) {
+                    boolean valida = validaSenha(conta);
+                    if (valida) {
+                        conta.sacar(valor);
+                        deposito(contaDeposito, valor);
+                        salvarDados(contaDeposito.getNumConta(), contaDeposito);
+                        String valorImp = valorFinanceiro(valor);
+                        System.out.println("Transferência de R$ " + valorImp + " realizada com sucesso!");
+                        System.out.println();
+                    }
                 }
             }
         }
@@ -163,6 +229,7 @@ public class ContaService {
     public void salvarDados(int numConta, Conta conta){
         repository.salvar(numConta, conta);
     }
+
 
 
 }

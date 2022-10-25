@@ -44,25 +44,16 @@ public class Main {
                         if (conta == null) {
                             throw new SistemException("Conta não encontrada!");
                         } else {
-                            boolean valida = false;
-                            for(int i = 0; i < 3; i++) {
-                                System.out.println("Senha: ");
-                                String senha = sc.next();
-                                sc.nextLine();
-                                valida = contaService.validaSenha(numConta, senha);
-                                if (!valida) {
-                                    System.out.println("Senha Inválida!");
-                                } else {
-                                    break;
-                                }
-                            }
+                            boolean valida = contaService.validaSenha(conta);
+
                             if(valida){
                                 boolean logado = true;
                                 Cliente cliente = conta.getCliente();
-                                System.out.println("Bem vindo(a), "+cliente.getNome());
+
 
                                 //Menu do cliente com acesso autorizado
                                 do {
+                                    System.out.println("Bem vindo(a), "+cliente.getNome());
                                     contaService.dadosConta(numConta);
                                     System.out.println();
                                     Menu.menuCliente2();
@@ -71,7 +62,8 @@ public class Main {
                                     switch (opcao2) {
 
                                         case 1:
-                                            contaService.deposito(conta);
+                                            double valor = contaService.valorDeposito();
+                                            contaService.deposito(conta, valor);
                                             break;
 
                                         case 2:

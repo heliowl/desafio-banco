@@ -14,7 +14,7 @@ public class Menu {
         System.out.println();
         System.out.println("1 - Acessar Conta");
         System.out.println("2 - Abrir Conta");
-        System.out.println("3 - Encerrar Conta");
+        //System.out.println("3 - Gerente");
         System.out.println("0 - Sair do Sistema");
     }
 
@@ -31,7 +31,7 @@ public class Menu {
         System.out.println("2 - Saque");
         System.out.println("3 - Transferência");
         System.out.println("4 - Extrato");
-        System.out.println("5 - Abrir uma nova conta");
+        System.out.println("5 - Encerrar conta");
         System.out.println("0 - Encerrar sessão");
     }
 }
