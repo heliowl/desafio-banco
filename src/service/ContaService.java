@@ -6,6 +6,9 @@ import model.Conta;
 import model.ContaCorrente;
 import model.ContaPoupanca;
 import repository.Repository;
+import util.ImprimeValores;
+
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Scanner;
 import static model.Conta.TIPO.CC;
@@ -103,15 +106,33 @@ public class ContaService {
         }else {
             System.out.println("Valor da transferência: ");
             double valor = sc.nextDouble();
-
-                conta.sacar(valor);
-                contaDeposito.depositar(valor);
-                salvarDados(contaDeposito.getNumConta(), contaDeposito);
+            confirmaTransferencia(contaDeposito, valor);
+            System.out.println("Confirmar depósito? [S/N] ");
+            String confirmar = sc.next().toLowerCase();
+            sc.nextLine();
+            while (!confirmar.equals("s") && !confirmar.equals("n")) {
+                System.out.println("Opção inválida!");
+                confirmaTransferencia(contaDeposito, valor);
+                System.out.println("Confirmar depósito? [S/N] ");
+                confirmar = sc.next().toLowerCase();
+                sc.nextLine();
+                //confirmar.toLowerCase();
             }
+            if (confirmar.equals("s")) {
+                System.out.println("Senha:");
+                String senha = sc.nextLine();
+                boolean valida = validaSenha(conta.getNumConta(),senha);
+                if (!valida) {
+                    throw new SistemException("Senha Inválida!");
+                } else {
+                    conta.sacar(valor);
+                    contaDeposito.depositar(valor);
+                    salvarDados(contaDeposito.getNumConta(), contaDeposito);
+                }
+            }
+        }
+
     }
-
-
-
 
     public void extrato(Conta conta) {
         Cliente cliente = conta.getCliente();
