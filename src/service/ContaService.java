@@ -1,16 +1,15 @@
 package service;
 import exception.SistemException;
 import menu.Menu;
-import model.Cliente;
-import model.Conta;
-import model.ContaCorrente;
-import model.ContaPoupanca;
+import model.*;
 import repository.Repository;
 
 import java.util.List;
 import java.util.Scanner;
-import static model.Conta.TIPO.CC;
-import static model.Conta.TIPO.CP;
+
+import static model.Conta.TIPO.*;
+import static model.Transacoes.TIPO.*;
+import static util.FormataData.dataHora;
 import static util.ImprimeValores.valorFinanceiro;
 
 public class ContaService {
@@ -117,6 +116,10 @@ public class ContaService {
     public void deposito(Conta conta, double valor){
         valor = calculaJuros(conta, valor);
         conta.depositar(valor);
+
+        //Cria a transação depósito e adiciona a lista transações
+        Transacoes transacao = new Transacoes(conta, DEP, valor);
+        conta.adicionaTransacao(transacao);
     }
 
     //Verifica se a Conta Corrente está no cheque especial e calcula o juros cobrados no depósito
@@ -138,13 +141,19 @@ public class ContaService {
         if(aprovado) {
             conta.sacar(valor);
             validaSenha(conta);
+
+            //Cria a transação saque e adiciona a lista transações
+            Transacoes transacao = new Transacoes(conta, SAQ, - valor);
+            conta.adicionaTransacao(transacao);
+            System.out.println("Transação aprovada!");
+            System.out.println();
         }
     }
-
+    //Verifica se o cliente tem saldo ou saldo + cheque especial para fazer o saque
     public boolean limiteSaque(Conta conta, double valor){
         boolean aprovado = false;
         if(conta.getTipo().equals(CC)) {
-            if ((conta.getSaldo() - valor) < -500) {
+            if ((conta.getSaldo() - valor) < - ContaCorrente.getChequeEspecial()) {
                 System.out.println("Saldo insuficiente! Valor disponível: Saldo + R$ 500 do cheque especial!");
                 System.out.println();
             }else{
@@ -188,7 +197,20 @@ public class ContaService {
                     boolean valida = validaSenha(conta);
                     if (valida) {
                         conta.sacar(valor);
+
+                        //Cria a transação transferência e inclui a na lista transações do agente da transferência
+                        Transacoes transacao = new Transacoes(conta, TRA, - valor);
+                        conta.adicionaTransacao(transacao);
+
                         deposito(contaDeposito, valor);
+
+                        //exclui a transação depósito criada pela função "deposito" para inserção da transação transferência
+                        int num = contaDeposito.getTransacoes().size()-1;
+                        contaDeposito.getTransacoes().remove(num);
+
+                        //Cria a transação transferência e inclui a na lista transações de quem recebe a transferência
+                        Transacoes transacaoTraDep = new Transacoes(contaDeposito, TRA, valor);
+                        contaDeposito.adicionaTransacao(transacaoTraDep);
                         salvarDados(contaDeposito.getNumConta(), contaDeposito);
                         String valorImp = valorFinanceiro(valor);
                         System.out.println("Transferência de R$ " + valorImp + " realizada com sucesso!");
@@ -202,12 +224,26 @@ public class ContaService {
 
     public void extrato(Conta conta) {
         Cliente cliente = conta.getCliente();
+        System.out.println();
         System.out.println("=======================================");
         String saldo = valorFinanceiro(conta.getSaldo());
-        System.out.println( conta.getNomeBanco() + "\n" +
+        System.out.println( "                EXTRATO"+
+                "\n"+conta.getNomeBanco() + "   " +
                 "Agencia: " + conta.getAgencia() + "   Conta: " + conta.getNumConta() + "   " + conta.getTipo() + "\n" +
-                "Cliente: " + cliente.getNome() + "\n Saldo: R$ " + saldo);
+                "Cliente: " + cliente.getNome() + "\nSaldo: R$ " + saldo);
+        System.out.println(1);
+        System.out.println("Últimas movimentações: ");
+        mostrarTransacoes(conta);
         System.out.println("=======================================");
+        System.out.println();
+
+    }
+    //Função para imprimir as transações no extrato
+    public void mostrarTransacoes(Conta conta){
+        List<Transacoes> transacoes = conta.getTransacoes();
+
+        transacoes.forEach(t -> System.out.println(t.getTipo()+"   R$ "
+                +valorFinanceiro(t.getValor())+"   "+ dataHora(t.getDataTransacao())));
 
     }
 

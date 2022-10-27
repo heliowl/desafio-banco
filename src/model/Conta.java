@@ -1,6 +1,10 @@
 package model;
 
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class Conta{
     private static final int AGENCIA_PADRAO = 16;
     private String nomeBanco = Banco.nomeBanco();
@@ -11,6 +15,9 @@ public abstract class Conta{
     private TIPO tipo;
     private static int SEQUENCIAL = 1;
 
+    private List<Transacoes> transacoes;
+    private LocalDateTime dataCriacao;
+
     public Conta(Cliente cliente) {
 
         this.agencia = AGENCIA_PADRAO;
@@ -18,6 +25,8 @@ public abstract class Conta{
         this.cliente = cliente;
         this.saldo = saldo;
         this.tipo = tipo;
+        this.transacoes = new ArrayList<>();
+        this.dataCriacao = LocalDateTime.now();
     }
 
 
@@ -52,6 +61,19 @@ public abstract class Conta{
 
     public String getNomeBanco() {
         return nomeBanco;
+    }
+
+    public List<Transacoes> getTransacoes() {
+        return transacoes;
+    }
+
+    public void setTransacoes(List<Transacoes> transacoes) {
+        this.transacoes = transacoes;
+    }
+
+    public void adicionaTransacao(Transacoes transacao){
+        transacoes.add(transacao);
+
     }
 
     public static enum TIPO{

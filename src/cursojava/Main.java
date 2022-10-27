@@ -11,6 +11,8 @@ import service.ContaService;
 
 import java.util.*;
 
+import static util.ImprimeValores.valorFinanceiro;
+
 public class Main {
 
     public static void main(String[] args) throws SistemException {
@@ -64,6 +66,8 @@ public class Main {
                                         case 1:
                                             double valor = contaService.valorDeposito();
                                             contaService.deposito(conta, valor);
+                                            System.out.println("Depósito de R$ "+ valorFinanceiro(valor) + " realizado!");
+                                            System.out.println();
                                             break;
 
                                         case 2:
