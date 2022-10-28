@@ -55,6 +55,7 @@ public class Main {
 
                                 //Menu do cliente com acesso autorizado
                                 do {
+
                                     System.out.println("Bem vindo(a), "+cliente.getNome());
                                     contaService.dadosConta(numConta);
                                     System.out.println();
@@ -88,6 +89,10 @@ public class Main {
                                             contaService.extrato(conta);
                                             break;
 
+                                        case 5:
+                                            logado = contaService.encerrarConta(conta);
+                                            break;
+
                                         case 0:
                                             logado = false;
                                             break;
@@ -106,9 +111,6 @@ public class Main {
                         cliente.setConta(conta);
                         clienteService.salvarDados(cliente.getId(), cliente);
 
-                        //Testando se a abertura de conta está funcionando
-                        //System.out.println(cliente);
-                        //System.out.println(conta);
                         break;
 
                     case 3:

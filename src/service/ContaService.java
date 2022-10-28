@@ -3,12 +3,14 @@ import exception.SistemException;
 import menu.Menu;
 import model.*;
 import repository.Repository;
+import util.Confirmar;
 
 import java.util.List;
 import java.util.Scanner;
 
 import static model.Conta.TIPO.*;
 import static model.Transacoes.TIPO.*;
+import static util.Confirmar.confirmarSimNao;
 import static util.FormataData.dataHora;
 import static util.ImprimeValores.valorFinanceiro;
 
@@ -106,6 +108,7 @@ public class ContaService {
 
     public void confirmacaoAberturaConta(Conta conta){
         Cliente cliente = conta.getCliente();
+        System.out.println();
         System.out.println("Sua Conta Corrente foi aberta com sucesso!");
         System.out.println();
         System.out.println("Guarde seus dados para poder acessá-la!");
@@ -182,17 +185,11 @@ public class ContaService {
             boolean aprovado = limiteSaque(conta, valor);
             if(aprovado) {
                 confirmaTransferencia(contaDeposito, valor);
-                System.out.println("Confirmar transferência? [S/N] ");
-                String confirmar = sc.next();
-                sc.nextLine();
-                while (!confirmar.equalsIgnoreCase("s") && !confirmar.equalsIgnoreCase("n")) {
-                    System.out.println("Opção inválida!");
-                    confirmaTransferencia(contaDeposito, valor);
-                    System.out.println("Confirmar transferência? [S/N] ");
-                    confirmar = sc.next();
-                    sc.nextLine();
 
-                }
+                String pergunta = "Confirmar transferência? [S/N] ";
+                String confirmar = confirmarSimNao(pergunta);
+
+
                 if (confirmar.equalsIgnoreCase("s")) {
                     boolean valida = validaSenha(conta);
                     if (valida) {
@@ -259,13 +256,85 @@ public class ContaService {
         System.out.println("=======================================");
 
     }
+    //Verifica se o cliente tem débito ou crédito e impõe condições para o encerramento da conta
+    public boolean encerrarConta(Conta conta){
+        boolean logado = true;
+        if(conta.getSaldo() > 0){
+            System.out.println("Para encerrar a conta você precisa sacar a totalidade de seu saldo R$ "+valorFinanceiro(conta.getSaldo()));
+            String pergunta = "Confirmar saque? [S/N]";
+            String confirmar = confirmarSimNao(pergunta);
+            if(confirmar.equalsIgnoreCase("s")){
+                boolean valida = validaSenha(conta);
+                if (valida) {
+                    double valor = conta.getSaldo();
+                    conta.sacar(valor);
+                    System.out.println("Saque de R$ " + valorFinanceiro(valor) + " realizado!");
+                    excluirConta(conta.getNumConta());
+                    System.out.println();
+                    System.out.println("Sua conta foi encerrada, esperamos vê-lo novamente em breve!");
+                    System.out.println();
+                    logado = false;
+                }
+            }else{
+                System.out.println("Sua conta continua aberta! Saldo R$ "+valorFinanceiro(conta.getSaldo()));
+                logado = true;
+            }
 
+        }else if(conta.getSaldo() < 0){
+            String pergunta = "Deseja fazer o depósito? [S/N]";
+            double saldo = Math.abs(conta.getSaldo());
+            double valorDep = saldo + (saldo * ContaCorrente.getJuros());
+            System.out.println("Você está com saldo negativo de R$ "+valorFinanceiro(conta.getSaldo())+
+                    ", para encerrar a conta deposite o débito + os juros no valor de R$ "+valorFinanceiro(valorDep));
+            String confirmar = confirmarSimNao(pergunta);
+            if(confirmar.equalsIgnoreCase("s")){
+                boolean valida = validaSenha(conta);
+                if (valida) {
+                    deposito(conta, valorDep);
+                    System.out.println();
+                    System.out.println("O valor de R$ " + valorFinanceiro(valorDep) + " foi depositado!");
+                    System.out.println("Sua conta foi encerrada, esperamos vê-lo novamente em breve!");
+                    System.out.println();
+                    excluirConta(conta.getNumConta());
+                    logado = false;
+                }
+            }else{
+                System.out.println();
+                System.out.println("Sua conta continua aberta! Saldo R$ "+valorFinanceiro(conta.getSaldo()));
+                System.out.println();
+                logado = true;
+            }
+        }else{
+            String pergunta = "Tem certeza que deseja excluir essa conta? [S/N]";
+            String confirmar = confirmarSimNao(pergunta);
+            if(confirmar.equalsIgnoreCase("s")){
+                boolean valida = validaSenha(conta);
+                if (valida) {
+                    excluirConta(conta.getNumConta());
+                    System.out.println();
+                    System.out.println("Sua conta foi encerrada, esperamos vê-lo novamente em breve!");
+                    System.out.println();
+                    logado = false;
+                }else {
+                    System.out.println();
+                    System.out.println("Sua conta continua aberta! Saldo R$ "+valorFinanceiro(conta.getSaldo()));
+                    System.out.println();
+                    logado = true;
+                }
+            }
+        }
 
-    //Cadastra usuário e salva novos dados
-    public void salvarDados(int numConta, Conta conta){
-        repository.salvar(numConta, conta);
+        return logado;
     }
 
 
+    //Cadastra conta de usuário e salva novos dados
+    public void salvarDados(int numConta, Conta conta){
+        repository.salvar(numConta, conta);
+    }
+    //exclui a conta do repositório
+    public void excluirConta(int numConta){
+        repository.excluir(numConta);
+    }
 
 }
